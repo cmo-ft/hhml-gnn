@@ -129,15 +129,30 @@ class Preprocessor:
 
         return sum_info
 
-    def apply(self):     
-        self.tree_name = "nominal"   
+    def apply(self, tree_name: str = "nominal", prefix: str = ""):     
+        self.tree_name = tree_name  
         self.rdf = RDF(self.tree_name, self.file)
         self.total_entries = self.file.Get(self.tree_name).GetEntries()
         self.cols = ROOT.std.vector('std::string')()
 
+        sample_name = 'Unknown'
+        if self.is_data:
+            sample_name = 'data'
+        else:
+            # read tree first to get sample name
+            t_tmp = self.file.Get(self.tree_name)
+            nb = t_tmp.GetEntry(0)
+            if nb > 0:
+                sample_dsid = str(t_tmp.mcChannelNumber)
+                sample_name = get_sample_name(sample_dsid)
+
         sum_info = self.sum_info
 
         start = perf_counter()
+        self.logger.info(f'({prefix}) [{sample_name}] -- Branch: {self.tree_name}')
+        self.logger.info(
+            f'({prefix}) [{self.tree_name}] - original total events: {sum_info["total_event"]:0.0f}, weighted sum: {sum_info["weighted"]:0.2f} ')
+        self.logger.info(f'({prefix}) [{self.tree_name}] - Start to loop for {self.total_entries:0.0f} events')
 
         report = self.rdf.Report()
         # define weight
@@ -167,9 +182,18 @@ class Preprocessor:
         {sum_info['weighted']}
         """
 
-        self._de('weight', weight_str)
-        # define sample name using DSID
-        self._de("Sample_Name", "map_dsid(mcChannelNumber)")
+        # self._de('weight', weight_str)
+        # # define sample name using DSID
+        # self._de("Sample_Name", "map_dsid(mcChannelNumber)")
+
+        if self.is_data:
+            self._de('weight', "1")
+            self._de("Sample_Name", "TString(\"data\")")
+        else:
+            self._de('weight', weight_str)
+            # define sample name using DSID
+            self._de("Sample_Name", "map_dsid(mcChannelNumber)")
+            
 
         self._de("EvtNum", "eventNumber % 100")
         # define flavor category (flavor_categorization.cpp)
@@ -331,7 +355,7 @@ class Preprocessor:
         self.rdf.Snapshot(self.tree_name, self.output_dir, self.cols, snap_option)
 
         end = perf_counter()
-        self.logger.info(f'[{self.tree_name}] - Done in {end - start:0.2f} sec')
+        self.logger.info(f'[{self.file.GetName()} {self.tree_name}] - Done in {end - start:0.2f} sec')
 
         # report.Print()
         return report

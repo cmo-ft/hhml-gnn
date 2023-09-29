@@ -17,7 +17,7 @@ def main(input: str, output: str = "", is_data: bool = True, only_nominal: bool 
 
     logger.info(f'Input: {input}')
     logger.info(f'Output: {output}')
-
+    logger.info(f'Is DATA: {is_data}')
     start = perf_counter()
 
     load_config()
