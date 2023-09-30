@@ -11,6 +11,7 @@ import random
 import json
 import copy
 import time
+from scipy.special import softmax
 
 import config
 from config import args
@@ -31,9 +32,7 @@ if __name__ == '__main__':
     res = copy.deepcopy(args.reslog)
     args.optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
     optimizer = args.optimizer
-    # args.reduce_schedule = torch.optim.lr_scheduler.ReduceLROnPlateau(args.optimizer, mode='min', factor=0.1, patience=20,
-    #              verbose=False, threshold=0.01, threshold_mode='rel',
-    #              cooldown=0, min_lr=1e-8, eps=1e-8)
+    
     args.reduce_schedule = torch.optim.lr_scheduler.ReduceLROnPlateau(args.optimizer, mode='min', factor=0.5, patience=8,
                  verbose=False, threshold=0.1, threshold_mode='rel',
                  cooldown=0, min_lr=1e-8, eps=1e-8)
@@ -90,8 +89,6 @@ if __name__ == '__main__':
                     print("Epoch %d/%d with lr %f, data_slice %d/%d training finished in %.2f min. Total time used: %.2f min." \
                             % (epoch, epoch_start+args.num_epochs-1, optimizer.param_groups[0]['lr'], data_slice_id+1, args.num_slices_train,\
                                 (res['train_time'][-1])/60, (time.time() - timeProgramStart)/60), flush=True)
-                # del trainloader
-                # torch.cuda.empty_cache()
                 
             # Test
             for data_slice_id in range(args.num_slices_test):
@@ -114,8 +111,6 @@ if __name__ == '__main__':
                 json_object = json.dumps(res, indent=4)
                 with open(f"{args.logDir}/train-result.json", "w") as outfile:
                     outfile.write(json_object)
-                # del testloader
-                # torch.cuda.empty_cache()
 
             meanTrainLoss = meanTrainLoss / args.num_slices_train
             meanTrainAcc = meanTrainAcc / args.num_slices_train
@@ -147,34 +142,45 @@ if __name__ == '__main__':
 
     # Apply
     net = copy.deepcopy(args.net)
-    if args.pre_train != 0 and (not args.apply_only):
-        net.load_state_dict(torch.load(args.pre_net, map_location=device))
-    
-    net.load_state_dict(torch.load(f'{args.logDir}/net.pt', map_location=device))
+    if args.apply_net=="":
+        net.load_state_dict(torch.load(f'{args.logDir}/net.pt', map_location=device))
+    else:
+        net.load_state_dict(torch.load(f'{args.apply_net}', map_location=device))
+
     net.to(device)
         
     applyRes = args.reslog.copy()
     pred = np.zeros(0)
     out = np.zeros(0)
-    for data_slice_id in range(args.num_slices_apply):
-        applyloader = myDataset.get_dataloader('apply',data_slice_id, args.num_slices_test, args.data_size, args.batch_size)
-             
-        pred_tmp, out_tmp = train_test.test_one_epoch(net, applyloader, criterion, applyRes, save_new_graph_loc="./out/", save_new_graph_id=data_slice_id)
-        if len(pred) == 0:
-            pred = pred_tmp
-            out = out_tmp
-        else:
-            pred = np.concatenate((pred, pred_tmp))
-            out = np.concatenate((out, out_tmp))
 
-    # save pred given by network during applying
-    np.save(args.logDir+f'/predApply_GPU0.npy', arr=pred)
-    np.save(args.logDir+f'/outApply_GPU0.npy', arr=out)
-    print("\n\n")
-    print("Apply finished.")
-    print("Apply time %.2f min" % (sum(applyRes['test_time'])/60.))
-    print("Apply loss: %.4f \t Apply acc: %.4f" % (sum(applyRes['test_loss'])/len(applyRes['test_loss']),
-                                                    sum(applyRes['test_acc'])/len(applyRes['test_acc'])))        
-    print("\nTotal time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
-    
+    if len(args.apply_file_list)==0:        
+        applyloader = myDataset.get_dataloader('apply', data_slice_id, args.num_slices_test, args.data_size, args.batch_size)
+             
+        pred, out = train_test.test_one_epoch(net, applyloader, criterion, applyRes, save_new_graph_loc="./out/", save_new_graph_id=data_slice_id)
+        # save pred given by network during applying
+        np.save(args.logDir+f'/predApply_GPU0.npy', arr=pred)
+        np.save(args.logDir+f'/outApply_GPU0.npy', arr=out)
+
+        os.makedirs(args.logDir+'/images', exist_ok=True)
+        draw.draw_all(args.logDir, args.logDir+'/images/', True)
+        print("\n\n")
+        print("Apply finished.")
+        print("Apply time %.2f min" % (sum(applyRes['test_time'])/60.))
+        print("Apply loss: %.4f \t Apply acc: %.4f" % (sum(applyRes['test_loss'])/len(applyRes['test_loss']),
+                                                        sum(applyRes['test_acc'])/len(applyRes['test_acc'])))        
+        print("\nTotal time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
+    else:
+        for iapply in range(len(args.apply_file_list)):
+            infile_name = args.apply_file_list[iapply]
+            applyloader = myDataset.get_dataloader('apply', iapply, args.num_slices_test, args.data_size, args.batch_size)
+            pred, out = train_test.test_one_epoch(net, applyloader, criterion, applyRes)
+
+            score = softmax(out[:,1:], axis=1)[:,1]
+            save_file_name = os.path.basename(infile_name).split('.pt')[0]
+            save_file_name = "score_"+save_file_name+".npy"
+            np.save(args.logDir+save_file_name, arr=score)
+            print(infile_name)
+            print("Apply loss: %.4f \t Apply acc: %.4f" % (sum(applyRes['test_loss'])/len(applyRes['test_loss']),
+                                                            sum(applyRes['test_acc'])/len(applyRes['test_acc'])))        
+            print("Total time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
 

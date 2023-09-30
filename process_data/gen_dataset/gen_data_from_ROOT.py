@@ -68,7 +68,7 @@ def generate_pt_list(root_file_name: str):
             # sample weight
             sample_weight = data.loc[ievent, 'weight']
             # global feature
-            ft_glob = torch.tensor(data.loc[ievent, ft_name_glob]).view(1,-1)
+            ft_glob = torch.tensor(data.loc[ievent, ft_name_glob]).view(1,-1).float()
 
             # node feature
             ft_lzvec = torch.tensor(data.loc[ievent, ft_name_PtEtaPhiE]).view(5, 4)
@@ -76,10 +76,10 @@ def generate_pt_list(root_file_name: str):
             ft_parId[:3] = torch.tensor(data.loc[ievent, ft_name_parId]).view(3,2)
             ft_parId = ft_parId.view(5,2)
 
-            ft_nodes = torch.cat([ft_parId, ft_lzvec], dim=1)
+            ft_nodes = torch.cat([ft_parId, ft_lzvec], dim=1).float()
 
             # edge feature
-            ft_edge = torch.tensor(data.loc[ievent, ft_name_edge]).view(-1,2)
+            ft_edge = torch.tensor(data.loc[ievent, ft_name_edge]).view(-1,2).float()
 
             pt = tg.data.Data(
                 x=ft_nodes, edge_index=edges, u=ft_glob, y=y, edge_attr=ft_edge, sample_weight=sample_weight,

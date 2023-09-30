@@ -110,8 +110,12 @@ def get_args():
     parser.add_argument('--num_slices_test', type=int, default=1, help='split test data into n slices, default=1')
     parser.add_argument('--num_slices_apply', type=int, default=1, help='split apply data into n slices, default=1')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate, default=0.001')
-    parser.add_argument('--apply_only', type=int, default=0, choices=[0,1], help='apply only mode, default=0')
     parser.add_argument('--ifold', type=int, choices=[0,1,2], help='fold id. choices=[0,1,2]')
+
+    # Apply
+    parser.add_argument('--apply_only', type=int, default=0, choices=[0,1], help='apply only mode, default=0')
+    parser.add_argument('--apply_net', type=str, default="", help="network to be applied")
+    parser.add_argument('--apply_file_list', type=str, nargs='*', default=None, help='apply file list')
 
     # Use trained model
     parser.add_argument('--pre_train', type=int, default=0, choices=[0, 1], help='use pre train epoch, def=0, 0 means no, 1 means yes')

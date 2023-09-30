@@ -211,6 +211,28 @@ def draw_significance(truth_label, score, weights, logDir):
     plt.legend(loc=3)
     fig.savefig(logDir+"significance.pdf")
 
+def draw_all(log_dir, out_dir, if_apply):
+    with open(log_dir+"/train-result.json",'r') as f:
+        res = json.load(f)
+    
+    draw_loss_acc(res, out_dir)
+
+    if out_dir == 0:
+        out = np.load(log_dir + "outTest_GPU0.npy")
+        weights = np.load(log_dir + "sampleweightTest.npy")
+    else:
+        out = np.load(log_dir + "outApply_GPU0.npy")
+        weights = np.load(log_dir + "sampleweightApply.npy")
+        
+    truth_label = out[:,0]
+    raw_score = out[:,2]
+    raw_score = out[:,2] - out[:,1]
+    score = softmax(out[:,1:], axis=1)[:,1]
+    draw_roc_score(truth_label=truth_label, score=score, weights=weights, logDir=args.out_dir, raw_score=raw_score)
+
+    draw_significance(truth_label=truth_label, score=score, weights=weights, logDir=args.out_dir)
+
+
 
 if __name__ == '__main__':
     # Input arguments
@@ -222,25 +244,4 @@ if __name__ == '__main__':
     parser.add_argument('--out_dir', '-o', type=str, default="./images/", help='Output directory. Default=./images/')
     args = parser.parse_args()
 
-    # Get labels and predicts
-    
-    with open(args.dir+"/train-result.json",'r') as f:
-        res = json.load(f)
-    
-    draw_loss_acc(res, args.out_dir)
-
-    if args.apply == 0:
-        out = np.load(args.dir + "outTest_GPU0.npy")
-        weights = np.load(args.dir + "sampleweightTest.npy")
-    else:
-        out = np.load(args.dir + "outApply_GPU0.npy")
-        weights = np.load(args.dir + "sampleweightApply.npy")
-        
-    truth_label = out[:,0]
-    raw_score = out[:,2]
-    raw_score = out[:,2] - out[:,1]
-    score = softmax(out[:,1:], axis=1)[:,1]
-    draw_roc_score(truth_label=truth_label, score=score, weights=weights, logDir=args.out_dir, raw_score=raw_score)
-
-    draw_significance(truth_label=truth_label, score=score, weights=weights, logDir=args.out_dir)
-
+    draw_all(args.dir, args.out_dir, args.apply)

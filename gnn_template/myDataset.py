@@ -18,22 +18,19 @@ from config import args
 from collections import deque
 
 class MyDataset(torch_geometric.data.Dataset):
-    def __init__(self, data_id, transform=None, pre_transform=None, pre_filter=None, save_sampleweight_loc=None):
-        self.data_dir = args.fileList[0]
-        super().__init__(self.data_dir, transform, pre_transform, pre_filter)
-        data = torch.load(f'{self.data_dir}/dataset{data_id}.pt')
-        if save_sampleweight_loc != None:
-            np.save(save_sampleweight_loc, data.sample_weight.numpy())
-        data.edge_attr[data.edge_attr.isnan()] = 0
-        data.edge_attr = data.edge_attr.float()
-        data.u = data.u.float()
-        # self.weight = data.sample_weight.clip(min=0) * (data.y*1e3 + 1)
-        self.weight = data.sample_weight.abs() * (data.y*1e3 + 1)
+    def __init__(self, data_file, transform=None, pre_transform=None, pre_filter=None):
+        self.data_file = data_file
+        super().__init__(self.data_file, transform, pre_transform, pre_filter)
+        data = torch.load(data_file)
+        # data = torch.load(f'{self.data_dir}/dataset{data_id}.pt')
+
+        self.weight = data.sample_weight.clip(min=0) * (data.y*1e3 + 1)
+        # self.weight = data.sample_weight.abs() * (data.y*1e3 + 1)
         self.data = data
 
     @property
     def processed_file_names(self):
-        return [self.data_dir]
+        return [self.data_file]
 
 
     def len(self) -> int:
@@ -98,9 +95,15 @@ idx_dict = {
 
 
 if args.apply_only == 0:
-    trainset_list = [MyDataset(dataid) for dataid in idx_dict['train']]
-    testset = MyDataset(idx_dict['test'], save_sampleweight_loc=args.logDir+"/sampleweightTest.npy")
-applyset = MyDataset(idx_dict['apply'], save_sampleweight_loc=args.logDir+"/sampleweightApply.npy")
+    trainset_list = [MyDataset(f'{args.fileList[0]}/dataset{dataid}.pt') for dataid in idx_dict['train']]
+    test_id = idx_dict["test"]
+    testset = MyDataset( f'{args.fileList[0]}/dataset{test_id}.pt') 
+
+if args.apply_file_list==0:
+    apply_id = idx_dict["apply"]
+    applyset = MyDataset( f'{args.fileList[0]}/dataset{apply_id}.pt') 
+else:
+    applyset = [MyDataset(f) for f in args.apply_file_list]
 
 def get_dataloader(loaderType, data_slice_id, num_slices, data_size, batch_size):
     loader = None
@@ -109,5 +112,5 @@ def get_dataloader(loaderType, data_slice_id, num_slices, data_size, batch_size)
     elif loaderType=='test':
         loader = torch_geometric.loader.DataLoader(testset, batch_size=batch_size, shuffle=False)
     elif loaderType=='apply':
-        loader = torch_geometric.loader.DataLoader(applyset, batch_size=batch_size, shuffle=False)
+        loader = torch_geometric.loader.DataLoader(applyset[data_slice_id], batch_size=batch_size, shuffle=False)
     return loader
