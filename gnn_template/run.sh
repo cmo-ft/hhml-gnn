@@ -16,7 +16,7 @@ batch_size=2024
 apply_only=0
 apply_net=""
 apply_file_list=()
-log_dir=./
+log_dir=../
 
 # Pre-train
 pre_train=0
@@ -24,7 +24,7 @@ pre_net="./net.pt"
 pre_log="./train-result.json"
 
 
-python gnn/main.py --fileList "${fileList[@]}" \
+python main.py --fileList "${fileList[@]}" \
                 --num_slices_train $num_slices_train --num_slices_test $num_slices_test --num_slices_apply $num_slices_apply\
                 --apply_only $apply_only  --pre_train $pre_train  --pre_net $pre_net  --pre_log $pre_log --num_epochs=$num_epochs \
                 --lr $lr --batch_size $batch_size --ifold $ifold  --apply_net $apply_net --apply_file_list ${apply_file_list[@]} --logDir $log_dir
