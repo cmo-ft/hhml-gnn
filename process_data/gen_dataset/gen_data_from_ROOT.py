@@ -66,7 +66,7 @@ def generate_pt_list(root_file_name: str):
             if_SR = torch.tensor(data.loc[ievent, "Evt_SR"]==1)
             # ifold = int(data.loc[ievent, 'EvtNum'] % nfolds)
             # sample weight
-            sample_weight = data.loc[ievent, 'weight']
+            sample_weight = torch.tensor(data.loc[ievent, 'weight'], dtype=torch.float)
             # global feature
             ft_glob = torch.tensor(data.loc[ievent, ft_name_glob]).view(1,-1).float()
 

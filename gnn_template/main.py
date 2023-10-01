@@ -12,11 +12,11 @@ import json
 import copy
 import time
 from scipy.special import softmax
+import torch_geometric
 
 import config
 from config import args
 import myDataset
-from utils.confusionMatrix import get_confusion_matrix
 import utils.draw as draw
 
 if __name__ == '__main__':
@@ -179,15 +179,22 @@ if __name__ == '__main__':
     else:
         for iapply in range(len(args.apply_file_list)):
             infile_name = args.apply_file_list[iapply]
-            applyloader = myDataset.get_dataloader('apply', iapply, args.num_slices_test, args.data_size, args.batch_size)
+            print(f"\n {iapply+1}/{len(args.apply_file_list)}")
+            print(infile_name)
+
+            applyset = myDataset.MyDataset(infile_name)
+            applyloader = torch_geometric.loader.DataLoader(applyset, batch_size=args.batch_size, shuffle=False)
+            # applyloader = myDataset.get_dataloader('apply', iapply, args.num_slices_test, args.data_size, args.batch_size)
             pred, out = train_test.test_one_epoch(net, applyloader, criterion, applyRes)
 
-            score = softmax(out[:,1:], axis=1)[:,1]
-            save_file_name = os.path.basename(infile_name).split('.pt')[0]
-            save_file_name = "score_"+save_file_name+".npy"
-            np.save(args.logDir+save_file_name, arr=score)
-            print(infile_name)
-            print("Apply loss: %.4f \t Apply acc: %.4f" % (sum(applyRes['test_loss'])/len(applyRes['test_loss']),
-                                                            sum(applyRes['test_acc'])/len(applyRes['test_acc'])))        
-            print("Total time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
+            if len(out)>0:
+                score = softmax(out[:,1:], axis=1)[:,1]
+                save_file_name = os.path.splitext(infile_name)[0]
+                save_file_name = save_file_name+f"_score{args.ifold}"+".npy"
+                np.save(save_file_name, arr=score)
+                print("Apply loss: %.4f \t Apply acc: %.4f" % (sum(applyRes['test_loss'])/len(applyRes['test_loss']),
+                                                                sum(applyRes['test_acc'])/len(applyRes['test_acc'])))        
+                print("Total time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
+            else:
+                print(f"Error: No data. Continue.", flush=True)
 

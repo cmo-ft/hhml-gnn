@@ -104,8 +104,8 @@ if args.apply_only == 0:
 if len(args.apply_file_list)==0:
     apply_id = idx_dict["apply"]
     applyset =[ MyDataset( f'{args.fileList[0]}/dataset{apply_id}.pt', save_sampleweight_loc=args.logDir+"/sampleweightApply.npy") ]
-else:
-    applyset = [MyDataset(f) for f in args.apply_file_list]
+# else:
+#     applyset = [MyDataset(f) for f in args.apply_file_list]
 
 def get_dataloader(loaderType, data_slice_id, num_slices, data_size, batch_size):
     loader = None
