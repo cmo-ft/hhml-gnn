@@ -62,7 +62,7 @@ def generate_pt_list(root_file_name: str):
         for ievent in range(len(data)):
             sample_name = data.loc[ievent,"Sample_Name"]
             y = 1 if ("HH" in sample_name) else 0
-            EvtNum = torch.tensor(data.loc[ievent, 'EvtNum'])
+            EvtNum = torch.tensor(data.loc[ievent, 'EvtNum'], dtype=torch.int)
             if_SR = torch.tensor(data.loc[ievent, "Evt_SR"]==1)
             # ifold = int(data.loc[ievent, 'EvtNum'] % nfolds)
             # sample weight

@@ -14,8 +14,8 @@ class data_source:
             self.data_list = [[] for i in range(self.nfold)]
             for file in self.data_file_list:
                 data = torch.load(file)
-                if_sr = torch.tensor(np.array(data.sr, dtype=bool), dtype=torch.bool)
-                evt_num = torch.tensor(data.EvtNum, dtype=torch.int)
+                if_sr = data.sr
+                evt_num = data.EvtNum
                 self.data_list = [ self.data_list[ifold] + data[if_sr & (evt_num%self.nfold==ifold)]  for ifold in range(self.nfold)]
         return self.data_list
         
