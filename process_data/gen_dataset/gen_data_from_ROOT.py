@@ -59,11 +59,11 @@ def generate_pt_list(root_file_name: str):
         print(f"Error: file {root_file_name} cannot be opened", flush=True)
         data = pd.DataFrame([])
     if len(data)!=0:    
-        for ievent in tqdm(range(len(data))):
+        for ievent in range(len(data)):
             sample_name = data.loc[ievent,"Sample_Name"]
             y = 1 if ("HH" in sample_name) else 0
-            EvtNum = data.loc[ievent, 'EvtNum']
-            if_SR = (data.loc[ievent, "Evt_SR"]==1)
+            EvtNum = torch.tensor(data.loc[ievent, 'EvtNum'])
+            if_SR = torch.tensor(data.loc[ievent, "Evt_SR"]==1)
             # ifold = int(data.loc[ievent, 'EvtNum'] % nfolds)
             # sample weight
             sample_weight = data.loc[ievent, 'weight']
@@ -95,4 +95,6 @@ def generate_pt_list(root_file_name: str):
 # store sample name
 pt_list, sample_name_list = generate_pt_list(filename)
 
-torch.save(tg.data.Batch.from_data_list(pt_list), filename)
+if len(pt_list)!=0:
+    torch.save(tg.data.Batch.from_data_list(pt_list), target_filename)
+print(f'from {filename} to {target_filename} done.')
