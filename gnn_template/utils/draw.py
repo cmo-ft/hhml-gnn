@@ -217,20 +217,20 @@ def draw_all(log_dir, out_dir, if_apply):
     
     draw_loss_acc(res, out_dir)
 
-    if out_dir == 0:
-        out = np.load(log_dir + "outTest_GPU0.npy")
-        weights = np.load(log_dir + "sampleweightTest.npy")
-    else:
+    if if_apply:
         out = np.load(log_dir + "outApply_GPU0.npy")
         weights = np.load(log_dir + "sampleweightApply.npy")
+    else:
+        out = np.load(log_dir + "outTest_GPU0.npy")
+        weights = np.load(log_dir + "sampleweightTest.npy")
         
     truth_label = out[:,0]
     raw_score = out[:,2]
     raw_score = out[:,2] - out[:,1]
     score = softmax(out[:,1:], axis=1)[:,1]
-    draw_roc_score(truth_label=truth_label, score=score, weights=weights, logDir=args.out_dir, raw_score=raw_score)
+    draw_roc_score(truth_label=truth_label, score=score, weights=weights, logDir=out_dir, raw_score=raw_score)
 
-    draw_significance(truth_label=truth_label, score=score, weights=weights, logDir=args.out_dir)
+    draw_significance(truth_label=truth_label, score=score, weights=weights, logDir=out_dir)
 
 
 

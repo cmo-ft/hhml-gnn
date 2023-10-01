@@ -123,6 +123,9 @@ if __name__ == '__main__':
             print(f"mean test loss: {meanLoss}, mean test acc: {meanAcc}")
             print("Total time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
             
+            image_log_dir = args.logDir+'/images/'
+            os.makedirs(image_log_dir, exist_ok=True)
+            draw.draw_all(args.logDir, image_log_dir, False)
             # draw.draw_loss_acc(res, args.logDir)
 
             # Record the best epoch
@@ -154,9 +157,9 @@ if __name__ == '__main__':
     out = np.zeros(0)
 
     if len(args.apply_file_list)==0:        
-        applyloader = myDataset.get_dataloader('apply', data_slice_id, args.num_slices_test, args.data_size, args.batch_size)
+        applyloader = myDataset.get_dataloader('apply', 0, args.num_slices_test, args.data_size, args.batch_size)
              
-        pred, out = train_test.test_one_epoch(net, applyloader, criterion, applyRes, save_new_graph_loc="./out/", save_new_graph_id=data_slice_id)
+        pred, out = train_test.test_one_epoch(net, applyloader, criterion, applyRes)
         # save pred given by network during applying
         np.save(args.logDir+f'/predApply_GPU0.npy', arr=pred)
         np.save(args.logDir+f'/outApply_GPU0.npy', arr=out)
@@ -169,6 +172,10 @@ if __name__ == '__main__':
         print("Apply loss: %.4f \t Apply acc: %.4f" % (sum(applyRes['test_loss'])/len(applyRes['test_loss']),
                                                         sum(applyRes['test_acc'])/len(applyRes['test_acc'])))        
         print("\nTotal time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
+        
+        image_log_dir = args.logDir+'/images/'
+        os.makedirs(image_log_dir, exist_ok=True)
+        draw.draw_all(args.logDir, image_log_dir, True)
     else:
         for iapply in range(len(args.apply_file_list)):
             infile_name = args.apply_file_list[iapply]

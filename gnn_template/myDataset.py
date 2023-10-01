@@ -18,11 +18,13 @@ from config import args
 from collections import deque
 
 class MyDataset(torch_geometric.data.Dataset):
-    def __init__(self, data_file, transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, data_file, transform=None, pre_transform=None, pre_filter=None, save_sampleweight_loc=None):
         self.data_file = data_file
         super().__init__(self.data_file, transform, pre_transform, pre_filter)
         data = torch.load(data_file)
         # data = torch.load(f'{self.data_dir}/dataset{data_id}.pt')
+        if save_sampleweight_loc != None:
+            np.save(save_sampleweight_loc, data.sample_weight.numpy())
 
         self.weight = data.sample_weight.clip(min=0) * (data.y*1e3 + 1)
         # self.weight = data.sample_weight.abs() * (data.y*1e3 + 1)
@@ -97,11 +99,11 @@ idx_dict = {
 if args.apply_only == 0:
     trainset_list = [MyDataset(f'{args.fileList[0]}/dataset{dataid}.pt') for dataid in idx_dict['train']]
     test_id = idx_dict["test"]
-    testset = MyDataset( f'{args.fileList[0]}/dataset{test_id}.pt') 
+    testset = MyDataset( f'{args.fileList[0]}/dataset{test_id}.pt', save_sampleweight_loc=args.logDir+"/sampleweightTest.npy") 
 
-if args.apply_file_list==0:
+if len(args.apply_file_list)==0:
     apply_id = idx_dict["apply"]
-    applyset = MyDataset( f'{args.fileList[0]}/dataset{apply_id}.pt') 
+    applyset =[ MyDataset( f'{args.fileList[0]}/dataset{apply_id}.pt', save_sampleweight_loc=args.logDir+"/sampleweightApply.npy") ]
 else:
     applyset = [MyDataset(f) for f in args.apply_file_list]
 
