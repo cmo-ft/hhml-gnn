@@ -9,6 +9,7 @@ from pathlib import Path
 import util.branch_selection as bs
 from util import region_selections as reg_sel
 from util.config import con, setup_logger, get_sample_name
+from util.saved_original_branch import original_list, original_kl_list, original_sys_list
 
 # ROOT.EnableImplicitMT()
 verbosity = ROOT.Experimental.RLogScopedVerbosity(ROOT.Detail.RDF.RDFLogChannel(), ROOT.Experimental.ELogLevel.kInfo)
@@ -342,6 +343,89 @@ class Preprocessor:
             #     f"Evt_{r}_count"
             # )]
 
+        '''
+        Sample Selection
+        '''
+        # Prompt Events
+        self._de(
+            'Evt_Prompt',  # Truth Prompt Check
+            '&&'.join([f'lep_isPrompt_{i}' for i in lep_loop])
+        )
+        brem_election_cut = " (lep_truthParentPdgId_{0} == (int) lep_ID_{0} && lep_truthParentType_{0} == 2) "
+        prompt_e_cut = "(abs((int) lep_ID_{0}) == 11 && lep_truthOrigin_{0} == 5 && {1})"
+        prompt_m_cut = "(abs((int) lep_ID_{0}) == 13 && lep_truthOrigin_{0} == 0)"
+
+        prompt_e_1_cut = prompt_e_cut.format(1, brem_election_cut.format(1))
+        prompt_e_2_cut = prompt_e_cut.format(2, brem_election_cut.format(2))
+        prompt_m_1_cut = prompt_m_cut.format(1)
+        prompt_m_2_cut = prompt_m_cut.format(2)
+
+        self._de(
+            'sample_prompt_1',
+            f'lep_isPrompt_1 || ({prompt_e_1_cut}) || ({prompt_m_1_cut})',
+            store=False,
+        )
+        self._de(
+            'sample_prompt_2',
+            f'lep_isPrompt_2 || ({prompt_e_2_cut}) || ({prompt_m_2_cut})',
+            store=False,
+        )
+        # prompt
+        self._de('Sample_Prompt', 'sample_prompt_1 && sample_prompt_2')
+        # qmisID
+        self._de('Sample_QMisID', 'lep_isQMisID_0 > 0 || lep_isQMisID_1 > 0 || lep_isQMisID_2 > 0')
+
+        self._de(
+            'sample_conv',
+            f"""(lep_truthOrigin_1 == 5 && !{brem_election_cut.format(1)}) || 
+                    (lep_truthOrigin_2 == 5 && !{brem_election_cut.format(2)})""",
+            store=False
+        )
+        self._de(
+            'sample_qed',
+            f"""(lep_truthParentType_1 == 21 && lep_truthParentOrigin_1 == 0) || 
+                    (lep_truthParentType_2 == 21 && lep_truthParentOrigin_2 == 0)""",
+            store=False
+        )
+        # ext/int conversion
+        self._de('Sample_ExtConv', '!(Sample_Prompt && Sample_QMisID) && (sample_conv && !sample_qed)')
+        self._de('Sample_intConv', '!(Sample_Prompt && Sample_QMisID) && (sample_conv && sample_qed)')
+
+        hf_cut = """
+            (lep_truthOrigin_{0} >= 25 && lep_truthOrigin_{0} <= 29) || 
+            lep_truthOrigin_{0} == 32 ||
+            lep_truthOrigin_{0} == 33
+            """
+        hf_e = f"""
+            ((({hf_cut.format(1)}) && abs(lep_ID_1) == 11) || (({hf_cut.format(2)}) && abs(lep_ID_2) == 11)) &&
+            (   (!({prompt_e_1_cut} || lep_isPrompt_1) && abs(lep_ID_1) == 11) ||
+                (!({prompt_e_2_cut} || lep_isPrompt_2) && abs(lep_ID_2) == 11) ) &&
+            !sample_conv
+            """
+        hf_m = f"""
+            ((({hf_cut.format(1)}) && abs(lep_ID_1) == 13) || (({hf_cut.format(2)}) && abs(lep_ID_2) == 13)) &&
+            (   (!({prompt_m_1_cut} || lep_isPrompt_1) && abs(lep_ID_1) == 13) ||
+                (!({prompt_m_2_cut} || lep_isPrompt_2) && abs(lep_ID_2) == 13) ) &&
+            !sample_conv
+            """
+        lf_e = f"""
+            !((({hf_cut.format(1)}) && abs(lep_ID_1) == 11) || (({hf_cut.format(2)}) && abs(lep_ID_2) == 11)) &&
+            (   (!({prompt_e_1_cut} || lep_isPrompt_1) && abs(lep_ID_1) == 11) ||
+                (!({prompt_e_2_cut} || lep_isPrompt_2) && abs(lep_ID_2) == 11) ) &&
+            !sample_conv
+            """
+        lf_m = f"""
+            !((({hf_cut.format(1)}) && abs(lep_ID_1) == 13) || (({hf_cut.format(2)}) && abs(lep_ID_2) == 13)) &&
+            (   (!({prompt_m_1_cut} || lep_isPrompt_1) && abs(lep_ID_1) == 13) ||
+                (!({prompt_m_2_cut} || lep_isPrompt_2) && abs(lep_ID_2) == 13) ) &&
+            !sample_conv
+            """
+
+        # heavy-flavor electron/muon
+        self._de('Sample_HF_e', hf_e)
+        self._de('Sample_HF_m', hf_m)
+        self._de('Sample_LF_e', lf_e)
+        self._de('Sample_LF_m', lf_m)
 
         self.rdf = self.rdf.Filter('||'.join([f'Evt_{r}' for r in region_names]), 'final output')
 
@@ -351,6 +435,19 @@ class Preprocessor:
         snap_option = ROOT.RDF.RSnapshotOptions()
         snap_option.fMode = "UPDATE"
         snap_option.fOverwriteIfExists = True
+
+        original_list_inter = list(set(original_list) & set(self.rdf.GetColumnNames()))
+        original_sys_list_inter = list(set(original_sys_list) & set(self.rdf.GetColumnNames()))
+
+        for b in original_list_inter:
+            self.cols.push_back(b)
+        # if self.kl:
+        #     for b in original_kl_list:
+        #         self.cols.push_back(b)
+        if not self.is_data:
+            for b in original_sys_list_inter:
+                self.cols.push_back(b)
+                
 
         self.rdf.Snapshot(self.tree_name, self.output_dir, self.cols, snap_option)
 
