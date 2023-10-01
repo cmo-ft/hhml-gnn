@@ -19,7 +19,7 @@ for datadir in `ls -d ${source_dir}/`; do
 		i=$(($i +  1))
 		if [[ $i -le $skip_num ]]; then continue; fi
 		
-		hep_sub /cefs/higgs/mocen/project/atlas/multilepton/preprocess/task.sh -o ${log_dir}/out -e ${log_dir}/err -argu ${rootfile}
+		hep_sub /cefs/higgs/mocen/project/atlas/multilepton/preprocess/task.sh -o ${log_dir}/out -e ${log_dir}/err -argu "${rootfile} data"
 		# hep_sub /cefs/higgs/mocen/project/atlas/multilepton/preprocess/jobs/roottask.sh -mem 3000  -o ${log_dir}/out -e ${log_dir}/err -argu ${rootfile}
 		# hep_sub /cefs/higgs/mocen/project/atlas/multilepton/preprocess/jobs/roottask.sh -wt short -mem 3000  -o ${log_dir}/out -e ${log_dir}/err -argu ${rootfile}
 

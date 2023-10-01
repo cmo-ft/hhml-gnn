@@ -1,6 +1,6 @@
 #!/bin/bash
 source_dir="/publicfs/atlas/atlasnew/higgs/HHML/v5/"
-source_dir=${source_dir}"/mc16e/"
+source_dir=${source_dir}"/mc16*/"
 target_dir="/cefs/higgs/mocen/project/atlas/multilepton/sample/mc/"
 log_dir=./
 
@@ -34,6 +34,7 @@ for mcdir in `ls -d $source_dir/`; do
 		done
 		cd ..
 	done
+	sleep 1h
 done
 
 
