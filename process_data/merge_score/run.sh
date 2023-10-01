@@ -1,20 +1,22 @@
 #!/bin/bash
 
-# source_dir=/lustre/collider/mocen/project/multilepton/data/mc16a/346343/
-source_dir=${1}
-target_dir="/lustre/collider/mocen/project/multilepton/dnn/trex/apply_all/data_with_score/"
-script=/lustre/collider/mocen/project/multilepton/dnn/trex/apply_all/merge_score/merge_score.py
+# source_data_pt=/lustre/collider/mocen/project/multilepton/data/mc16a/304014/user.sparajul.31752835._000002.output_output.pt
+source_data_pt=${1}
+target_dir=${2}
+script=/lustre/collider/mocen/project/multilepton/hhml-gnn/process_data/merge_score/merge_score.py
 
+source_dir=`dirname ${source_data_pt}`
 sid=`basename $source_dir`
-dataname=`dirname $source_dir`
-dataname=`basename $dataname`
+tmp=`dirname $source_dir`
+dataname=`basename $tmp`
 
 datadir=$dataname/$sid
 
-if [ ! -f $source_dir/pt_data/dataset.pt ]; then exit; fi
+# if [ ! -f $source_dir/pt_data/dataset.pt ]; then exit; fi
 echo ${source_dir}
 
 mkdir -p $target_dir/$datadir && cd $target_dir/$datadir
 
-python $script -i $source_dir -o $target_dir/$datadir
+# python $script -i $source_data_pt -o $target_dir/$datadir/
+python $script -i $source_data_pt -o ./
 

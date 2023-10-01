@@ -1,5 +1,3 @@
-
-from scipy.special import softmax
 import numpy as np
 import ROOT 
 import ROOT.RDataFrame as RDF
@@ -15,32 +13,48 @@ snap_option.fOverwriteIfExists = True
 nfolds = 3
 
 parser = argparse.ArgumentParser(description='Merge score into root file')
-parser.add_argument('-i', '--input', required=True, type=str, help='directory of input file')
+parser.add_argument('-i', '--input', required=True, type=str, help='path of input .pt file')
 parser.add_argument('-o', '--output', type=str, help='output directory')
 args = parser.parse_args()
 
 
 
-source_dir = args.input
+source_data_pt = args.input                                 # e.g. /path/to/user.sparajul.31752835._000002.output_output.pt
+source_data_prefix = os.path.splitext(source_data_pt)[0]    # e.g. /path/to/user.sparajul.31752835._000002.output_output
+source_data_root = source_data_prefix + '.root'             # e.g. /path/to/user.sparajul.31752835._000002.output_output.root
+data_prefix = os.path.basename(source_data_prefix)          # e.g. user.sparajul.31752835._000002.output_output.pt
 target_dir = args.output
+target_file = target_dir + data_prefix + ".root"            # e.g. /target/dir/user.sparajul.31752835._000002.output_output.root
 
-rdf = RDF("nominal", source_dir+"/data.root")
+print(f'From {source_data_root} to {target_file}')
+
+rdf = RDF("nominal", source_data_root)
 columns = list(rdf.GetColumnNames())
 
-score = []
+
+# load score into cppyy
+cpp_define_load_data = """
+void load_data(string datafilename, vector<double>& mydata){
+    std::ifstream input(datafilename);
+    if (!input) {
+        std::cerr << "Failed to open data.txt" << std::endl;
+        return;
+    }
+    float value;
+    while (input >> value) {
+        mydata.push_back(value);
+    }
+    input.close();
+}
+"""
+ROOT.gInterpreter.Declare(cpp_define_load_data)
 for i in range(nfolds):
     ROOT.gInterpreter.ProcessLine(f"vector<double> score{i};")
-    out = np.load(source_dir+f"/pt_data/fold{i}/outApply_GPU0.npy")
-    pred = softmax(out[:,1:], axis=1)[:,1]
-    # pred = np.zeros(len(out))
-    score += [pred]
+    tmpscore = np.load(source_data_prefix+f"_score{i}.npy")
+    np.savetxt(f"{data_prefix}{i}.txt", tmpscore, delimiter="\n")
+    ROOT.gInterpreter.ProcessLine(f'load_data("{data_prefix}{i}.txt", score{i});')
+    os.remove(f"{data_prefix}{i}.txt")
 
-
-for iscore in range(len(score[0])):
-    for ifold in range(nfolds):
-        ROOT.gInterpreter.ProcessLine(f"""
-                score{ifold}.push_back({(score[ifold][iscore])});
-        """)
     
 idx_str = ""
 for ifold in range(nfolds):
@@ -61,6 +75,6 @@ for ifold in range(nfolds):
 rdf = rdf.Define("score", idx_str)
 columns += [f"score"]
 
-rdf.Snapshot("nominal", target_dir+"/data.root", columns, snap_option)
+rdf.Snapshot("nominal", target_file, columns, snap_option)
 
 
