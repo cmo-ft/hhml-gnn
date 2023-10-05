@@ -123,10 +123,6 @@ if __name__ == '__main__':
             print(f"mean test loss: {meanLoss}, mean test acc: {meanAcc}")
             print("Total time used: %.2f min.\n"%((time.time() - timeProgramStart)/60))
             
-            image_log_dir = args.logDir+'/images/'
-            os.makedirs(image_log_dir, exist_ok=True)
-            draw.draw_all(args.logDir, image_log_dir, False)
-            # draw.draw_loss_acc(res, args.logDir)
 
             # Record the best epoch
             if meanLoss < bestLoss:
@@ -140,6 +136,10 @@ if __name__ == '__main__':
                 np.save(args.logDir+f'/outTest_GPU0.npy', arr=testOut)
                 torch.save(net.state_dict(), f'{args.logDir}/net{epoch}.pt')
 
+            image_log_dir = args.logDir+'/images/'
+            os.makedirs(image_log_dir, exist_ok=True)
+            draw.draw_all(args.logDir, image_log_dir, False)
+            # draw.draw_loss_acc(res, args.logDir)
             print(f"Best epoch: {bestEpoch} with loss {bestLoss}")
             print("\n\n", flush=True)
 
