@@ -21,8 +21,8 @@ apply_file_list=()
 
 # Pre-train
 pre_train=0
-pre_net="./net.pt"
-pre_log="./train-result.json"
+pre_net="${log_dir}/net.pt"
+pre_log="${log_dir}/train-result.json"
 
 
 python main.py --fileList "${fileList[@]}" \
