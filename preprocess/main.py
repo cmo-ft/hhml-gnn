@@ -15,21 +15,36 @@ logger = setup_logger('runner')
 def main(input: str, output: str = "", is_data: bool = True, only_nominal: bool = True):
     logger.info('Start')
 
+    run_all = not is_data and not only_nominal
     logger.info(f'Input: {input}')
     logger.info(f'Output: {output}')
     logger.info(f'Is DATA: {is_data}')
+    logger.info(f'Run only nominal: {not run_all}')
     start = perf_counter()
 
     load_config()
 
+    tree_list = ['nominal']
+    else_list = []
+
     f = ROOT.TFile(input)
 
-    # logger.info(f'Loop over {len(tree_list)} trees')
+    if run_all:
+        for obj in f.GetListOfKeys():
+            name = obj.GetName()
+            tree = f.Get(name)
+            is_tree = tree.IsA().InheritsFrom(ROOT.TTree.Class())
+            if is_tree and ('__1up' in name or '__1down' in name or 'MET_SoftTrk' in name):
+                tree_list += [name]
+            else:
+                else_list += [name]
+
+    logger.info(f'Loop over {len(tree_list)} trees')
     
     prep = Preprocessor(f, output, is_data)
 
-    prep.apply()
-
+    for idx, tree in enumerate(tree_list, start=1):
+        prep.apply(tree, f'{idx} / {len(tree_list)}')
 
     end = perf_counter()
     logger.info(f'Done in {end - start:0.2f} sec')
